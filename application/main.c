@@ -144,6 +144,7 @@ void vTaskCode2( void * pvParameters )
 			
 			if (xQueueSend(SimpleQueue,&i , portMAX_DELAY) == pdPASS)
 		{
+			
 			char str2[] = " Successfully sent the number to the queue Leaving SENDER_HPT Task\n\n\n";
 			vSerialPutString(str2, sizeof(str2)-1);
 		}
