@@ -59,14 +59,16 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
+
+/* Drivers includes */
 #include "GPIO.h"
-
-/* Demo application includes. */
-
 #include "serial.h"
 
-
 /*-----------------------------------------------------------*/
+/* Macros for code Implementation */
+/*-----------------------------------------------------------*/
+
+#define receiverQueueByID  1
 
 /* Constants to setup I/O and processor. */
 #define mainTX_ENABLE		( ( unsigned long ) 0x00010000 )	/* UART1. */
@@ -81,6 +83,8 @@
 #define button2ID        (('2')<<1)
 #define periodicID       (('3')<<1)
 
+
+
 typedef struct
 {
 	int id;
@@ -91,18 +95,15 @@ typedef struct
 
 static void prvSetupHardware( void )
 {
-	/* Perform the hardware setup required.  This is minimal as most of the
-	setup is managed by the settings in the project file. */
-
-	/* Configure the UART1 pins.  All other pins remain at their default of 0. */
-	PINSEL0 |= mainTX_ENABLE;
-	//PINSEL0 |= mainRX_ENABLE;
-
+	/* Confguring the GPIO pins */
 	GPIO_init();
-
-/* Configure UART */
+	
+  /* Configure the UART1 pins.  All other pins remain at their default of 0. */
+	PINSEL0 |= mainTX_ENABLE;
+	//PINSEL0 |= mainRX_ENABLE;  //Removed due no need for it
+	
+  /* Configure UART */
 	xSerialPortInitMinimal(mainCOM_TEST_BAUD_RATE);
-
 
 	/* Setup the peripheral bus to be the same as the PLL output. */
 	VPBDIV = mainBUS_CLK_FULL;
@@ -122,15 +123,11 @@ xQueueHandle SimpleQueue;
 
 
 void fasttask( void * pvParameters )
-{
-    // The parameter value is expected to be 1 as 1 is passed in the
-    //pvParameters value in the call to xTaskCreate() below. 
-    //configASSERT( ( ( uint32_t ) pvParameters ) == 1 );
-
+{    
 	int received=0;
     for( ;; )
     {
-			GPIO_write(PORT_0,PIN4,PIN_IS_HIGH);
+		//	GPIO_write(PORT_0,PIN4,PIN_IS_HIGH);
 			if (xQueueReceive(SimpleQueue, &received, portMAX_DELAY) != pdTRUE)
 		{
 			
@@ -139,7 +136,7 @@ void fasttask( void * pvParameters )
 		}
 		else
 		{
-			GPIO_write(PORT_0,PIN4,PIN_IS_LOW);
+			//GPIO_write(PORT_0,PIN4,PIN_IS_LOW);
 			
 			switch (received)
 			{
@@ -161,14 +158,14 @@ void fasttask( void * pvParameters )
 			}
 			
 			vSerialPutString("Successfully\n",13);
-			GPIO_write(PORT_0,PIN3,PIN_IS_LOW);
+			//GPIO_write(PORT_0,PIN3,PIN_IS_LOW);
 		}
 		;
         vSerialPutString("Hello\n",6);
 		
 
 			vTaskDelay(10);
-		GPIO_write(PORT_0,PIN3,PIN_IS_HIGH);
+		//GPIO_write(PORT_0,PIN3,PIN_IS_HIGH);
     }
 }
 
@@ -176,31 +173,19 @@ void fasttask( void * pvParameters )
 
 void vTaskCode2( void * pvParameters )
 {
-    // The parameter value is expected to be 1 as 1 is passed in the
-    //pvParameters value in the call to xTaskCreate() below. 
-    //configASSERT( ( ( uint32_t ) pvParameters ) == 1 );
-
 		static int i = periodicID;
     for( ;; )
     {
 			xQueueSend(SimpleQueue,&i , portMAX_DELAY);
-//			if (xQueueSend(SimpleQueue,&i , portMAX_DELAY) == pdPASS)
-//		{
-//			
-//			char str2[] = " Successfully sent the number to the queue Leaving SENDER_HPT Task\n\n\n";
-//			vSerialPutString(str2, sizeof(str2)-1);
-//		}
-		GPIO_write(PORT_0,PIN2,PIN_IS_LOW);
-
+			GPIO_write(PORT_0,PIN2,PIN_IS_LOW);
 			vTaskDelay(100);
-		GPIO_write(PORT_0,PIN2,PIN_IS_HIGH);
+			GPIO_write(PORT_0,PIN2,PIN_IS_HIGH);
     }
 }
+
+
+
 // Button monitoring task the which well be create two instance to monitore both buttons
-
-
-
-
 void vButton_Monitor (void * pvParameters )
 {
 	buttonParam_t * pin = (buttonParam_t *) pvParameters;
@@ -230,25 +215,41 @@ void vButton_Monitor (void * pvParameters )
 			count =0;
 		}
 		vTaskDelay(10);
-		GPIO_write(PORT_1,pin->pin,PIN_IS_LOW);
 	}
 }
-void Tasklow( void * pvParameters )
-{
-    // The parameter value is expected to be 1 as 1 is passed in the
-    //pvParameters value in the call to xTaskCreate() below. 
-    //configASSERT( ( ( uint32_t ) pvParameters ) == 1 );
 
+// CPU Load Task with periodicity 10ms, and Execution time 5ms
+void Load_1_Task( void * pvParameters )
+{
+		TickType_t xLastWakeTime = xTaskGetTickCount();
 		volatile int i = 2;
     for( ;; )
     {
-			for(i=0;i<100000;i++) GPIO_write(PORT_0,PIN5,PIN_IS_HIGH);
-		GPIO_write(PORT_0,PIN5,PIN_IS_LOW);
-
-			vTaskDelay(5);
-		GPIO_write(PORT_0,PIN5,PIN_IS_HIGH);
+			for(i=0;i<5055;i++) GPIO_write(PORT_0,PIN6,PIN_IS_HIGH);
+			
+			GPIO_write(PORT_0,PIN4,PIN_IS_LOW);
+			vTaskDelayUntil( &xLastWakeTime, 10 );
+			xLastWakeTime = xTaskGetTickCount();
+			GPIO_write(PORT_0,PIN4,PIN_IS_HIGH);
     }
 }
+
+// CPU Load Task with periodicity 100ms, and Execution time 12ms
+void Load_2_Task( void * pvParameters )
+{
+		TickType_t xLastWakeTime = xTaskGetTickCount();
+		volatile int i = 2;
+    for( ;; )
+    {
+			for(i=0;i<12135;i++) GPIO_write(PORT_0,PIN6,PIN_IS_HIGH);
+			
+			GPIO_write(PORT_0,PIN3,PIN_IS_LOW);
+			vTaskDelayUntil( &xLastWakeTime, 100 );
+			xLastWakeTime = xTaskGetTickCount();
+			GPIO_write(PORT_0,PIN3,PIN_IS_HIGH);
+    }
+}
+
 
 /*
  * Application entry point:
@@ -267,11 +268,12 @@ int main( void )
 	that periodically checks to see that all the other tasks are executing 
 	without error. */
 	
-  xTaskCreate(fasttask  ,"NAME",100,NULL,3,NULL );    	
-	xTaskCreate(vTaskCode2,"NAME",100,NULL,2,NULL );    	
-	xTaskCreate(Tasklow   ,"NAME",100,NULL,1,NULL );   
-	xTaskCreate(vButton_Monitor,"NAME",100,&button_1,1,NULL );    	
-	xTaskCreate(vButton_Monitor,"NAME",100,&button_2,1,NULL );    	
+ // xTaskCreate(fasttask  ,"NAME",100,NULL,3,NULL );    	
+	//xTaskCreate(vTaskCode2,"NAME",100,NULL,2,NULL );    	
+	xTaskCreate(Load_1_Task   ,"NAME",100,NULL,2,NULL );   
+	xTaskCreate(Load_2_Task   ,"NAME",100,NULL,1,NULL );   
+	//xTaskCreate(vButton_Monitor,"NAME",100,&button_1,1,NULL );    	
+	//xTaskCreate(vButton_Monitor,"NAME",100,&button_2,1,NULL );    	
 	
 	SimpleQueue = xQueueCreate(5, sizeof (int));
   if (SimpleQueue == 0)  // Queue not created
