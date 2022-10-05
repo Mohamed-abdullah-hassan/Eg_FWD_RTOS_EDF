@@ -70,34 +70,40 @@
 
 /* Constants to setup I/O and processor. */
 #define mainTX_ENABLE		( ( unsigned long ) 0x00010000 )	/* UART1. */
-#define mainRX_ENABLE		( ( unsigned long ) 0x00040000 ) 	/* UART1. */
+//#define mainRX_ENABLE		( ( unsigned long ) 0x00040000 ) 	/* UART1. */
 #define mainBUS_CLK_FULL	( ( unsigned char ) 0x01 )
 
 
 /* Constants for the ComTest demo application tasks. */
 #define mainCOM_TEST_BAUD_RATE	( ( unsigned long ) 115200 )
 
-/* Priorities for the demo application tasks. */
 
 
-/* Constants used by the "check" task.  As described at the head of this file
-the check task toggles an LED.  The rate at which the LED flashes is used to
-indicate whether an error has been detected or not.  If the LED toggles every
-3 seconds then no errors have been detected.  If the rate increases to 500ms
-then an error has been detected in at least one of the demo application tasks. */
+static void prvSetupHardware( void )
+{
+	/* Perform the hardware setup required.  This is minimal as most of the
+	setup is managed by the settings in the project file. */
+
+	/* Configure the UART1 pins.  All other pins remain at their default of 0. */
+	PINSEL0 |= mainTX_ENABLE;
+	//PINSEL0 |= mainRX_ENABLE;
+
+	GPIO_init();
+
+/* Configure UART */
+	xSerialPortInitMinimal(mainCOM_TEST_BAUD_RATE);
 
 
+	/* Setup the peripheral bus to be the same as the PLL output. */
+	VPBDIV = mainBUS_CLK_FULL;
+}
 /*-----------------------------------------------------------*/
 
-struct AMessage
-{
-    char ucMessageID;
-    char ucData[ 2 ];
-};
+
 
 xQueueHandle SimpleQueue;
 
-static void prvSetupHardware( void );
+//static void prvSetupHardware( void );
 
 /*-----------------------------------------------------------*/
 
@@ -216,26 +222,6 @@ int main( void )
 /*-----------------------------------------------------------*/
 
 
-static void prvSetupHardware( void )
-{
-	/* Perform the hardware setup required.  This is minimal as most of the
-	setup is managed by the settings in the project file. */
-
-	/* Configure the UART1 pins.  All other pins remain at their default of 0. */
-	PINSEL0 |= mainTX_ENABLE;
-	PINSEL0 |= mainRX_ENABLE;
-
-	GPIO_init();
-	/* LED pins need to be output. */
-
-/* Configure UART */
-	xSerialPortInitMinimal(mainCOM_TEST_BAUD_RATE);
-
-
-	/* Setup the peripheral bus to be the same as the PLL output. */
-	VPBDIV = mainBUS_CLK_FULL;
-}
-/*-----------------------------------------------------------*/
 
 
 void vApplicationTickHook( void )
