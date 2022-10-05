@@ -77,6 +77,16 @@
 /* Constants for the ComTest demo application tasks. */
 #define mainCOM_TEST_BAUD_RATE	( ( unsigned long ) 115200 )
 
+#define button1ID        (('1')<<1)
+#define button2ID        (('2')<<1)
+#define periodicID       (('3')<<1)
+
+typedef struct
+{
+	int id;
+	pinX_t pin;
+
+}	buttonParam_t;
 
 
 static void prvSetupHardware( void )
@@ -103,9 +113,13 @@ static void prvSetupHardware( void )
 
 xQueueHandle SimpleQueue;
 
-//static void prvSetupHardware( void );
 
-/*-----------------------------------------------------------*/
+////////////////////////////////////////////////////////////////////////////////////
+//  Tasks                                                                         //
+////////////////////////////////////////////////////////////////////////////////////
+
+
+
 
 void fasttask( void * pvParameters )
 {
@@ -119,17 +133,39 @@ void fasttask( void * pvParameters )
 			GPIO_write(PORT_0,PIN4,PIN_IS_HIGH);
 			if (xQueueReceive(SimpleQueue, &received, portMAX_DELAY) != pdTRUE)
 		{
+			
 			vSerialPutString("Error in Receiving from Queue\n\n",31);
+			
 		}
 		else
 		{
+			GPIO_write(PORT_0,PIN4,PIN_IS_LOW);
 			
+			switch (received)
+			{
+				case (button1ID):
+					vSerialPutString("Button 1 is relesed\n",20);
+				break;
+				case (button2ID):
+					vSerialPutString("Button 2 is relesed\n",20);
+				break;
+				case ((button1ID)|PIN_IS_HIGH):
+					vSerialPutString("Button 1 is pressed\n",20);
+				break;
+				case ((button2ID)|PIN_IS_HIGH):
+					vSerialPutString("Button 2 is pressed\n",20);
+				break;
+				case (periodicID):
+					vSerialPutString("Periodic Task Message\n",22);
+				break;
+			}
 			
 			vSerialPutString("Successfully\n",13);
+			GPIO_write(PORT_0,PIN3,PIN_IS_LOW);
 		}
-		GPIO_write(PORT_0,PIN4,PIN_IS_LOW);
+		;
         vSerialPutString("Hello\n",6);
-		GPIO_write(PORT_0,PIN3,PIN_IS_LOW);
+		
 
 			vTaskDelay(10);
 		GPIO_write(PORT_0,PIN3,PIN_IS_HIGH);
@@ -144,23 +180,59 @@ void vTaskCode2( void * pvParameters )
     //pvParameters value in the call to xTaskCreate() below. 
     //configASSERT( ( ( uint32_t ) pvParameters ) == 1 );
 
-		int i = 2;
+		static int i = periodicID;
     for( ;; )
     {
-			
-			if (xQueueSend(SimpleQueue,&i , portMAX_DELAY) == pdPASS)
-		{
-			
-			char str2[] = " Successfully sent the number to the queue Leaving SENDER_HPT Task\n\n\n";
-			vSerialPutString(str2, sizeof(str2)-1);
-		}
+			xQueueSend(SimpleQueue,&i , portMAX_DELAY);
+//			if (xQueueSend(SimpleQueue,&i , portMAX_DELAY) == pdPASS)
+//		{
+//			
+//			char str2[] = " Successfully sent the number to the queue Leaving SENDER_HPT Task\n\n\n";
+//			vSerialPutString(str2, sizeof(str2)-1);
+//		}
 		GPIO_write(PORT_0,PIN2,PIN_IS_LOW);
 
-			vTaskDelay(500);
+			vTaskDelay(100);
 		GPIO_write(PORT_0,PIN2,PIN_IS_HIGH);
     }
 }
+// Button monitoring task the which well be create two instance to monitore both buttons
 
+
+
+
+void vButton_Monitor (void * pvParameters )
+{
+	buttonParam_t * pin = (buttonParam_t *) pvParameters;
+	int id = (pin->id);
+	pinState_t buttonSwitch;
+	unsigned char oldState=PIN_IS_LOW; //variable to monitor user action
+	unsigned char count =0; //simple algorithm for Debouncing
+			int i = 2;
+
+	for ( ;; )
+	{
+		buttonSwitch = GPIO_read(PORT_1,pin->pin);
+		if( buttonSwitch != oldState)
+		{
+			count++;
+			
+			if(count >=3) //Ensure that the button is pressed continuoly for 30 ms
+			{
+				id = (pin->id)|buttonSwitch;
+				//xQueueSend(SimpleQueue,&(pin)->id , portMAX_DELAY);
+				xQueueSend(SimpleQueue,&id , portMAX_DELAY);
+				oldState = buttonSwitch;				
+			}
+		}
+		else
+		{
+			count =0;
+		}
+		vTaskDelay(10);
+		GPIO_write(PORT_1,pin->pin,PIN_IS_LOW);
+	}
+}
 void Tasklow( void * pvParameters )
 {
     // The parameter value is expected to be 1 as 1 is passed in the
@@ -182,6 +254,8 @@ void Tasklow( void * pvParameters )
  * Application entry point:
  * Starts all the other tasks, then starts the scheduler. 
  */
+static buttonParam_t button_1 = {button1ID,PIN1};
+static buttonParam_t button_2 = {button2ID,PIN2};
 int main( void )
 {
 	/* Setup the hardware for use with the Keil demo board. */
@@ -192,9 +266,12 @@ int main( void )
 	/* Start the check task - which is defined in this file.  This is the task
 	that periodically checks to see that all the other tasks are executing 
 	without error. */
+	
   xTaskCreate(fasttask  ,"NAME",100,NULL,3,NULL );    	
 	xTaskCreate(vTaskCode2,"NAME",100,NULL,2,NULL );    	
-	xTaskCreate(Tasklow   ,"NAME",100,NULL,1,NULL );    	
+	xTaskCreate(Tasklow   ,"NAME",100,NULL,1,NULL );   
+	xTaskCreate(vButton_Monitor,"NAME",100,&button_1,1,NULL );    	
+	xTaskCreate(vButton_Monitor,"NAME",100,&button_2,1,NULL );    	
 	
 	SimpleQueue = xQueueCreate(5, sizeof (int));
   if (SimpleQueue == 0)  // Queue not created
