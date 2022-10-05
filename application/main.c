@@ -69,6 +69,7 @@
 /*-----------------------------------------------------------*/
 
 #define receiverQueueByID  1
+#define buttonUseRCFilter  0  //Debouncing is performed using physical RC filter
 
 /* Constants to setup I/O and processor. */
 #define mainTX_ENABLE		( ( unsigned long ) 0x00010000 )	/* UART1. */
