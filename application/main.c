@@ -84,7 +84,13 @@
 #define button2ID        (('2')<<1)
 #define periodicID       (('3')<<1)
 
-
+extern BaseType_t xTaskPeriodicCreate( TaskFunction_t pxTaskCode,
+                            const char * const pcName, /*lint !e971 Unqualified char types are allowed for strings and single characters only. */
+                            const configSTACK_DEPTH_TYPE usStackDepth,
+                            void * const pvParameters,
+                            UBaseType_t uxPriority,
+														TickType_t period,
+                            TaskHandle_t * const pxCreatedTask );
 
 typedef struct
 {
@@ -271,8 +277,10 @@ int main( void )
 	
  // xTaskCreate(fasttask  ,"NAME",100,NULL,3,NULL );    	
 	//xTaskCreate(vTaskCode2,"NAME",100,NULL,2,NULL );    	
-	xTaskCreate(Load_1_Task   ,"NAME",100,NULL,2,NULL );   
-	xTaskCreate(Load_2_Task   ,"NAME",100,NULL,1,NULL );   
+	//xTaskCreate(Load_1_Task   ,"NAME",100,NULL,2,NULL );   
+	//xTaskCreate(Load_2_Task   ,"NAME",100,NULL,1,NULL );   
+	xTaskPeriodicCreate(Load_1_Task   ,"NAME",100,NULL,2,10,NULL );  
+	xTaskPeriodicCreate(Load_2_Task   ,"NAME",100,NULL,1,100,NULL );   	
 	//xTaskCreate(vButton_Monitor,"NAME",100,&button_1,1,NULL );    	
 	//xTaskCreate(vButton_Monitor,"NAME",100,&button_2,1,NULL );    	
 	

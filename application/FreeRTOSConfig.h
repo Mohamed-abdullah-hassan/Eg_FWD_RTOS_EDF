@@ -42,6 +42,8 @@
  * See http://www.freertos.org/a00110.html
  *----------------------------------------------------------*/
 
+#define configUSE_EDF_SCHEDULER 1
+#define configUSE_IDEL_MAX_DELAY 0
 #define configUSE_PREEMPTION		1
 #define configUSE_IDLE_HOOK			0
 #define configUSE_TICK_HOOK			1
