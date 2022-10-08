@@ -229,12 +229,17 @@ void vButton_Monitor (void * pvParameters )
 void Load_1_Task( void * pvParameters )
 {
 		TickType_t xLastWakeTime = xTaskGetTickCount();
+	volatile  int runcounters =0;
 		volatile int i = 2;
     for( ;; )
     {
-			for(i=0;i<5055;i++) GPIO_write(PORT_0,PIN6,PIN_IS_HIGH);
-			
+			for(i=0;i<5055;i++)
+			{
+				//GPIO_write(PORT_0,PIN3,PIN_IS_LOW);
+				GPIO_write(PORT_0,PIN4,PIN_IS_HIGH);
+			}
 			GPIO_write(PORT_0,PIN4,PIN_IS_LOW);
+			runcounters++;
 			vTaskDelayUntil( &xLastWakeTime, 10 );
 			xLastWakeTime = xTaskGetTickCount();
 			GPIO_write(PORT_0,PIN4,PIN_IS_HIGH);
@@ -248,7 +253,12 @@ void Load_2_Task( void * pvParameters )
 		volatile int i = 2;
     for( ;; )
     {
-			for(i=0;i<12135;i++) GPIO_write(PORT_0,PIN6,PIN_IS_HIGH);
+			GPIO_write(PORT_0,PIN3,PIN_IS_HIGH);
+			for(i=0;i<12135;i++) 
+			{
+				//GPIO_write(PORT_0,PIN4,PIN_IS_LOW);
+				GPIO_write(PORT_0,PIN3,PIN_IS_HIGH);
+			}
 			
 			GPIO_write(PORT_0,PIN3,PIN_IS_LOW);
 			vTaskDelayUntil( &xLastWakeTime, 100 );
@@ -279,8 +289,8 @@ int main( void )
 	//xTaskCreate(vTaskCode2,"NAME",100,NULL,2,NULL );    	
 	//xTaskCreate(Load_1_Task   ,"NAME",100,NULL,2,NULL );   
 	//xTaskCreate(Load_2_Task   ,"NAME",100,NULL,1,NULL );   
-	xTaskPeriodicCreate(Load_1_Task   ,"NAME",100,NULL,2,10,NULL );  
-	xTaskPeriodicCreate(Load_2_Task   ,"NAME",100,NULL,1,100,NULL );   	
+	xTaskPeriodicCreate(Load_1_Task   ,"Task1",100,NULL,2,10,NULL );  
+	xTaskPeriodicCreate(Load_2_Task   ,"Task2",100,NULL,1,100,NULL );   	
 	//xTaskCreate(vButton_Monitor,"NAME",100,&button_1,1,NULL );    	
 	//xTaskCreate(vButton_Monitor,"NAME",100,&button_2,1,NULL );    	
 	

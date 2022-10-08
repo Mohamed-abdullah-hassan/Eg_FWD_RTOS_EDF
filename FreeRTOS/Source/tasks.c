@@ -231,7 +231,7 @@
 
 #define prvAddTaskToReadyList(pxTCB)                                  \
     traceMOVED_TASK_TO_READY_STATE(pxTCB);                            \
-    listINSERT_END(&(xReadyTaskListEDF), &((pxTCB)->xStateListItem)); \
+    vListInsert(&(xReadyTaskListEDF), &((pxTCB)->xStateListItem)); \
     tracePOST_MOVED_TASK_TO_READY_STATE(pxTCB)
 // Using listINSERT_END() as Inline version of vListInsertEnd() to provide slight optimisation for * xTaskIncrementTick().
 #endif
@@ -2158,7 +2158,7 @@ void vTaskStartScheduler(void)
                               &xIdleTaskHandle); /*lint !e961 MISRA exception, justified as it is not a redundant explicit cast to all supported compilers. */
 #else
 
-#if (configUSE_IDEL_MAX_DELAY == 0)
+#if (configUSE_IDLE_MAX_DELAY == 0)
         TickType_t initTDLEPeriod = 150;
         xReturn = xTaskPeriodicCreate(prvIdleTask,
                                       configIDLE_TASK_NAME,
@@ -2964,6 +2964,9 @@ BaseType_t xTaskIncrementTick(void)
 
                     /* Place the unblocked task into the appropriate ready
                      * list. */
+										#if (configUSE_EDF_SCHEDULER ==1 )
+										pxTCB->xStateListItem.xItemValue = pxTCB->xStateListItem.xItemValue + pxTCB->xTaskPeriod;
+										#endif
                     prvAddTaskToReadyList(pxTCB);
 
 /* A task being unblocked cannot cause an immediate
@@ -2974,7 +2977,12 @@ BaseType_t xTaskIncrementTick(void)
                          * only be performed if the unblocked task has a
                          * priority that is equal to or higher than the
                          * currently executing task. */
+											
+											#if (configUSE_EDF_SCHEDULER ==1)
+											if (pxTCB->xTaskPeriod <= pxCurrentTCB->xTaskPeriod)
+											#else											
                         if (pxTCB->uxPriority >= pxCurrentTCB->uxPriority)
+											#endif
                         {
                             xSwitchRequired = pdTRUE;
                         }
@@ -2991,7 +2999,8 @@ BaseType_t xTaskIncrementTick(void)
 /* Tasks of equal priority to the currently running task will share
  * processing time (time slice) if preemption is on, and the application
  * writer has not explicitly turned time slicing off. */
-#if ((configUSE_PREEMPTION == 1) && (configUSE_TIME_SLICING == 1))
+#if (configUSE_EDF_SCHEDULER ==0)
+            #if ((configUSE_PREEMPTION == 1) && (configUSE_TIME_SLICING == 1))
         {
             if (listCURRENT_LIST_LENGTH(&(pxReadyTasksLists[pxCurrentTCB->uxPriority])) > (UBaseType_t)1)
             {
@@ -3001,8 +3010,21 @@ BaseType_t xTaskIncrementTick(void)
             {
                 mtCOVERAGE_TEST_MARKER();
             }
+						
         }
 #endif /* ( ( configUSE_PREEMPTION == 1 ) && ( configUSE_TIME_SLICING == 1 ) ) */
+						#else
+					
+            if (listCURRENT_LIST_LENGTH(&(xReadyTaskListEDF)) > (UBaseType_t)1)
+            {
+                xSwitchRequired = pdTRUE;
+            }
+            else
+            {
+                mtCOVERAGE_TEST_MARKER();
+            }
+					#endif
+
 
 #if (configUSE_TICK_HOOK == 1)
         {
@@ -3217,7 +3239,9 @@ void vTaskSwitchContext(void)
 #if (configUSE_EDF_SCHEDULER == 0)
         taskSELECT_HIGHEST_PRIORITY_TASK(); /*lint !e9079 void * is used as this macro is used with timers and co-routines too.  Alignment is known to be fine as the type of the pointer stored and retrieved is the same. */
 #else
+
         pxCurrentTCB = (TCB_t *)listGET_OWNER_OF_HEAD_ENTRY(&(xReadyTaskListEDF));
+				
 #endif
         traceTASK_SWITCHED_IN();
 
@@ -3624,10 +3648,22 @@ static portTASK_FUNCTION(prvIdleTask, pvParameters)
              * the list, and an occasional incorrect value will not matter.  If
              * the ready list at the idle priority contains more than one task
              * then a task other than the idle task is ready to execute. */
-            if (listCURRENT_LIST_LENGTH(&(pxReadyTasksLists[tskIDLE_PRIORITY])) > (UBaseType_t)1)
+#if (configUSE_EDF_SCHEDULER ==0           )
+					if (listCURRENT_LIST_LENGTH(&(pxReadyTasksLists[tskIDLE_PRIORITY])) > (UBaseType_t)1)
             {
                 taskYIELD();
             }
+#else
+					if (listCURRENT_LIST_LENGTH(&(xReadyTaskListEDF)) > (UBaseType_t)1)
+            {
+							    if (uxListRemove(&(pxCurrentTCB->xStateListItem)) )
+									{
+										listSET_LIST_ITEM_VALUE(&((pxCurrentTCB)->xStateListItem), (pxCurrentTCB)->xTaskPeriod + xTickCount);
+        										prvAddTaskToReadyList(pxCurrentTCB);
+									}
+                taskYIELD();
+            }
+#endif
             else
             {
                 mtCOVERAGE_TEST_MARKER();
