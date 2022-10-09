@@ -840,6 +840,7 @@ BaseType_t xTaskPeriodicCreate(TaskFunction_t pxTaskCode,
                                void *const pvParameters,
                                UBaseType_t uxPriority,
                                TickType_t period,
+															 
                                TaskHandle_t *const pxCreatedTask)
 {
     TCB_t *pxNewTCB;
@@ -914,6 +915,10 @@ BaseType_t xTaskPeriodicCreate(TaskFunction_t pxTaskCode,
         prvInitialiseNewTask(pxTaskCode, pcName, (uint32_t)usStackDepth, pvParameters, uxPriority, pxCreatedTask, pxNewTCB, NULL);
 
         // Add periodicity to Task TCB
+			#if (configUSE_APPLICATION_TASK_TAG ==1)
+			
+			
+			#endif
         pxNewTCB->xTaskPeriod = period;
 
         listSET_LIST_ITEM_VALUE(&((pxNewTCB)->xStateListItem), (pxNewTCB)->xTaskPeriod + xTickCount);
@@ -5626,3 +5631,75 @@ static void freertos_tasks_c_additions_init(void)
 #endif
 
 #endif /* if ( configINCLUDE_FREERTOS_TASK_C_ADDITIONS_H == 1 ) */
+
+void taskSwitc_IN (void)
+{
+	char i = ( char )(pxCurrentTCB)->pxTaskTag;
+	switch(i)
+	{
+		case '0': //IDLE task
+			GPIO_write(PORT_0,PIN1,PIN_IS_HIGH);
+		break;
+		case '1': //Load 1 task
+			GPIO_write(PORT_0,PIN2,PIN_IS_HIGH);
+		break;
+		case '2': //Load2 task
+			GPIO_write(PORT_0,PIN3,PIN_IS_HIGH);
+		break;
+		case '3': //Reciver task
+			GPIO_write(PORT_0,PIN4,PIN_IS_HIGH);
+		break;
+		case '4': //Periodic task
+			GPIO_write(PORT_0,PIN5,PIN_IS_HIGH);
+		break;
+		case '5': //Button 1 task
+			GPIO_write(PORT_0,PIN6,PIN_IS_HIGH);
+		break;
+		case '6': //Button 2 task
+			GPIO_write(PORT_0,PIN7,PIN_IS_HIGH);
+		break;
+		default:
+			GPIO_write(PORT_0,PIN1,PIN_IS_LOW);
+		GPIO_write(PORT_0,PIN2,PIN_IS_LOW);
+		GPIO_write(PORT_0,PIN3,PIN_IS_LOW);
+		GPIO_write(PORT_0,PIN4,PIN_IS_LOW);
+		GPIO_write(PORT_0,PIN5,PIN_IS_LOW);
+		GPIO_write(PORT_0,PIN6,PIN_IS_LOW);
+		GPIO_write(PORT_0,PIN7,PIN_IS_LOW);
+		break;
+		
+	}
+	
+}
+
+void taskSwitc_out (void)
+{
+	char i = ( char )(pxCurrentTCB)->pxTaskTag;
+	switch(i)
+	{
+		case '0': //IDLE task
+			GPIO_write(PORT_0,PIN1,PIN_IS_LOW);
+		break;
+		case '1': //Load 1 task
+			GPIO_write(PORT_0,PIN2,PIN_IS_LOW);
+		break;
+		case '2': //Load2 task
+			GPIO_write(PORT_0,PIN3,PIN_IS_LOW);
+		break;
+		case '3': //Reciver task
+			GPIO_write(PORT_0,PIN4,PIN_IS_LOW);
+		break;
+		case '4': //Periodic task
+			GPIO_write(PORT_0,PIN5,PIN_IS_LOW);
+		break;
+		case '5': //Button 1 task
+			GPIO_write(PORT_0,PIN6,PIN_IS_LOW);
+		break;
+		case '6': //Button 2 task
+			GPIO_write(PORT_0,PIN7,PIN_IS_LOW);
+		break;
+		default:
+			break;
+	}
+	
+}

@@ -131,14 +131,15 @@ xQueueHandle SimpleQueue;
 
 void fasttask( void * pvParameters )
 {    
+	TickType_t xLastWakeTime = xTaskGetTickCount();
 	int received=0;
     for( ;; )
     {
 		//	GPIO_write(PORT_0,PIN4,PIN_IS_HIGH);
-			if (xQueueReceive(SimpleQueue, &received, portMAX_DELAY) != pdTRUE)
+			if (xQueueReceive(SimpleQueue, &received, 0) != pdTRUE)
 		{
 			
-			vSerialPutString("Error in Receiving from Queue\n\n",31);
+			//vSerialPutString("Error in Receiving from Queue\n\n",31);
 			
 		}
 		else
@@ -148,30 +149,30 @@ void fasttask( void * pvParameters )
 			switch (received)
 			{
 				case (button1ID):
-					vSerialPutString("Button 1 is relesed\n",20);
+					vSerialPutString((const signed char *)"Button 1 is relesed\n",20);
 				break;
 				case (button2ID):
-					vSerialPutString("Button 2 is relesed\n",20);
+					vSerialPutString((const signed char *)"Button 2 is relesed\n",20);
 				break;
 				case ((button1ID)|PIN_IS_HIGH):
-					vSerialPutString("Button 1 is pressed\n",20);
+					vSerialPutString((const signed char *)"Button 1 is pressed\n",20);
 				break;
 				case ((button2ID)|PIN_IS_HIGH):
-					vSerialPutString("Button 2 is pressed\n",20);
+					vSerialPutString((const signed char *)"Button 2 is pressed\n",20);
 				break;
 				case (periodicID):
-					vSerialPutString("Periodic Task Message\n",22);
+					vSerialPutString((const signed char *)"Periodic Task Message\n",22);
 				break;
 			}
 			
-			vSerialPutString("Successfully\n",13);
+			//vSerialPutString((const signed char *)"Successfully\n",13);
 			//GPIO_write(PORT_0,PIN3,PIN_IS_LOW);
 		}
 		;
-        vSerialPutString("Hello\n",6);
+        //vSerialPutString((const signed char *)"Hello\n",6);
 		
 
-			vTaskDelay(10);
+			vTaskDelayUntil( &xLastWakeTime, 20 );
 		//GPIO_write(PORT_0,PIN3,PIN_IS_HIGH);
     }
 }
@@ -180,13 +181,14 @@ void fasttask( void * pvParameters )
 
 void vTaskCode2( void * pvParameters )
 {
+	TickType_t xLastWakeTime = xTaskGetTickCount();
 		static int i = periodicID;
     for( ;; )
     {
 			xQueueSend(SimpleQueue,&i , portMAX_DELAY);
-			GPIO_write(PORT_0,PIN2,PIN_IS_LOW);
-			vTaskDelay(100);
-			GPIO_write(PORT_0,PIN2,PIN_IS_HIGH);
+			//GPIO_write(PORT_0,PIN2,PIN_IS_LOW);
+			vTaskDelayUntil( &xLastWakeTime, 100 );
+			//GPIO_write(PORT_0,PIN2,PIN_IS_HIGH);
     }
 }
 
@@ -195,12 +197,13 @@ void vTaskCode2( void * pvParameters )
 // Button monitoring task the which well be create two instance to monitore both buttons
 void vButton_Monitor (void * pvParameters )
 {
+	TickType_t xLastWakeTime = xTaskGetTickCount();
 	buttonParam_t * pin = (buttonParam_t *) pvParameters;
 	int id = (pin->id);
 	pinState_t buttonSwitch;
 	unsigned char oldState=PIN_IS_LOW; //variable to monitor user action
 	unsigned char count =0; //simple algorithm for Debouncing
-			int i = 2;
+//			int i = 2;
 
 	for ( ;; )
 	{
@@ -221,7 +224,7 @@ void vButton_Monitor (void * pvParameters )
 		{
 			count =0;
 		}
-		vTaskDelay(10);
+		vTaskDelayUntil( &xLastWakeTime, 50 );
 	}
 }
 
@@ -235,14 +238,14 @@ void Load_1_Task( void * pvParameters )
     {
 			for(i=0;i<5055;i++)
 			{
-				//GPIO_write(PORT_0,PIN3,PIN_IS_LOW);
-				GPIO_write(PORT_0,PIN4,PIN_IS_HIGH);
+				GPIO_write(PORT_0,PIN15,PIN_IS_LOW);
+				//GPIO_write(PORT_0,PIN4,PIN_IS_HIGH);
 			}
-			GPIO_write(PORT_0,PIN4,PIN_IS_LOW);
+			//GPIO_write(PORT_0,PIN4,PIN_IS_LOW);
 			runcounters++;
 			vTaskDelayUntil( &xLastWakeTime, 10 );
 			xLastWakeTime = xTaskGetTickCount();
-			GPIO_write(PORT_0,PIN4,PIN_IS_HIGH);
+			//GPIO_write(PORT_0,PIN4,PIN_IS_HIGH);
     }
 }
 
@@ -253,17 +256,17 @@ void Load_2_Task( void * pvParameters )
 		volatile int i = 2;
     for( ;; )
     {
-			GPIO_write(PORT_0,PIN3,PIN_IS_HIGH);
+			//GPIO_write(PORT_0,PIN3,PIN_IS_HIGH);
 			for(i=0;i<12135;i++) 
 			{
 				//GPIO_write(PORT_0,PIN4,PIN_IS_LOW);
-				GPIO_write(PORT_0,PIN3,PIN_IS_HIGH);
+				GPIO_write(PORT_0,PIN15,PIN_IS_HIGH);
 			}
 			
-			GPIO_write(PORT_0,PIN3,PIN_IS_LOW);
+			//GPIO_write(PORT_0,PIN3,PIN_IS_LOW);
 			vTaskDelayUntil( &xLastWakeTime, 100 );
 			xLastWakeTime = xTaskGetTickCount();
-			GPIO_write(PORT_0,PIN3,PIN_IS_HIGH);
+			//GPIO_write(PORT_0,PIN3,PIN_IS_HIGH);
     }
 }
 
@@ -272,6 +275,13 @@ void Load_2_Task( void * pvParameters )
  * Application entry point:
  * Starts all the other tasks, then starts the scheduler. 
  */
+TaskHandle_t xHandleButton1 = NULL;
+	TaskHandle_t xHandleButton2 = NULL;
+	TaskHandle_t xHandlePeriodic = NULL;
+	TaskHandle_t xHandleRecevier = NULL;
+	TaskHandle_t xHandleLoad1 = NULL;
+	TaskHandle_t xHandleLoad2 = NULL;
+
 static buttonParam_t button_1 = {button1ID,PIN1};
 static buttonParam_t button_2 = {button2ID,PIN2};
 int main( void )
@@ -285,24 +295,40 @@ int main( void )
 	that periodically checks to see that all the other tasks are executing 
 	without error. */
 	
+	
+	
+	
+	
+	
  // xTaskCreate(fasttask  ,"NAME",100,NULL,3,NULL );    	
 	//xTaskCreate(vTaskCode2,"NAME",100,NULL,2,NULL );    	
 	//xTaskCreate(Load_1_Task   ,"NAME",100,NULL,2,NULL );   
 	//xTaskCreate(Load_2_Task   ,"NAME",100,NULL,1,NULL );   
-	xTaskPeriodicCreate(Load_1_Task   ,"Task1",100,NULL,2,10,NULL );  
-	xTaskPeriodicCreate(Load_2_Task   ,"Task2",100,NULL,1,100,NULL );   	
+	xTaskPeriodicCreate(Load_1_Task   ,"Load1",100,NULL,2,10,&xHandleLoad1 );  
+	xTaskPeriodicCreate(Load_2_Task   ,"Load2",100,NULL,1,100,&xHandleLoad2 );   	
 	//xTaskCreate(vButton_Monitor,"NAME",100,&button_1,1,NULL );    	
 	//xTaskCreate(vButton_Monitor,"NAME",100,&button_2,1,NULL );    	
+	xTaskPeriodicCreate(fasttask  ,"Reciver",100,NULL,3,20,&xHandleRecevier );  
+	xTaskPeriodicCreate(vTaskCode2,"Period",100,NULL,2,100,&xHandlePeriodic);    		
+	xTaskPeriodicCreate(vButton_Monitor,"Button1",100,&button_1,1,50,&xHandleButton1 );  
+	xTaskPeriodicCreate(vButton_Monitor,"Button2",100,&button_2,1,50,&xHandleButton2 );    		
+	
+	vTaskSetApplicationTaskTag( xHandleLoad1, ( void * ) '1' );
+	vTaskSetApplicationTaskTag( xHandleLoad2, ( void * ) '2' );
+	vTaskSetApplicationTaskTag( xHandleRecevier, ( void * ) '3' );
+	vTaskSetApplicationTaskTag( xHandlePeriodic, ( void * ) '4' );
+	vTaskSetApplicationTaskTag( xHandleButton1, ( void * ) '5' );
+	vTaskSetApplicationTaskTag( xHandleButton2, ( void * ) '6' );
 	
 	SimpleQueue = xQueueCreate(5, sizeof (int));
   if (SimpleQueue == 0)  // Queue not created
   {
 	  
-		vSerialPutString("Unable to create Integer Queue\n", 31);
+		vSerialPutString((const signed char *)"Unable to create Integer Queue\n", 31);
   }
   else
   {
-	  vSerialPutString("Integer Queue Created successfully\n\n", 35);
+	  vSerialPutString((const signed char *)"Integer Queue Created successfully\n\n", 35);
   }
 	/* Now all the tasks have been started - start the scheduler.
 
@@ -324,8 +350,8 @@ int main( void )
 
 void vApplicationTickHook( void )
 {
-	GPIO_write(PORT_0,PIN1,PIN_IS_HIGH);
-	GPIO_write(PORT_0,PIN1,PIN_IS_LOW);
+//	GPIO_write(PORT_0,PIN1,PIN_IS_HIGH);
+//	GPIO_write(PORT_0,PIN1,PIN_IS_LOW);
 }
 /*-----------------------------------------------------------*/
 

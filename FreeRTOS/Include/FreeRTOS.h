@@ -359,12 +359,8 @@
 /* Called after a task has been selected to run.  pxCurrentTCB holds a pointer
  * to the task control block of the selected task. */
 
-
-    #define traceTASK_SWITCHED_IN()   {\
-	 GPIO_write(PORT_0,PIN2,PIN_IS_HIGH);\
-	 GPIO_write(PORT_0,PIN2,PIN_IS_LOW);\
- }\
- 
+    extern void taskSwitc_IN(void);
+    #define traceTASK_SWITCHED_IN()  taskSwitc_IN();
 	
 #endif
 
@@ -385,11 +381,13 @@
     #define traceLOW_POWER_IDLE_END()
 #endif
 
-#ifndef traceTASK_SWITCHED_OUT
+#ifndef traceTASK_SWITCHED_OUT  
+
 
 /* Called before a task has been selected to run.  pxCurrentTCB holds a pointer
  * to the task control block of the task being switched out. */
-    #define traceTASK_SWITCHED_OUT()
+ extern void taskSwitc_out(void);
+    #define traceTASK_SWITCHED_OUT() taskSwitc_out();
 #endif
 
 #ifndef traceTASK_PRIORITY_INHERIT
