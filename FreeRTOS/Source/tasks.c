@@ -41,6 +41,9 @@
 #include "timers.h"
 #include "stack_macros.h"
 
+void taskSwitc_IN(void);
+void taskSwitc_out(void);
+
 /* Lint e9021, e961 and e750 are suppressed as a MISRA exception justified
  * because the MPU ports require MPU_WRAPPERS_INCLUDED_FROM_API_FILE to be defined
  * for the header files above, but not in this file, in order to generate the
@@ -2691,7 +2694,7 @@ UBaseType_t uxTaskGetSystemState(TaskStatus_t *const pxTaskStatusArray,
         {
             /* Fill in an TaskStatus_t structure with information on each
              * task in the Ready state. */
-            do
+					do
             {
                 uxQueue--;
                 uxTask += prvListTasksWithinSingleList(&(pxTaskStatusArray[uxTask]), &(pxReadyTasksLists[uxQueue]), eReady);
@@ -5645,33 +5648,50 @@ static void freertos_tasks_c_additions_init(void)
 
 #endif /* if ( configINCLUDE_FREERTOS_TASK_C_ADDITIONS_H == 1 ) */
 
-void taskSwitc_IN (void)
+
+
+extern uint32_t task_1_in,task_1_out,task_1_total_time;  // Load 1 Task time holders
+extern uint32_t task_2_in,task_2_out,task_2_total_time;  // Load 2 Task time holders
+extern uint32_t task_3_in,task_3_out,task_3_total_time;  // Receiver Task time holders
+extern uint32_t task_4_in,task_4_out,task_4_total_time;  // Periodic Task time holders
+extern uint32_t task_5_in,task_5_out,task_5_total_time;  // Button 1 Monitor Task time holders
+extern uint32_t task_6_in,task_6_out,task_6_total_time;  // Button 2 Monitor Task time holders
+extern uint32_t task_7_in,task_7_out,task_7_total_time;  // IDLE Task time holders
+
+void myTaskSwitch_IN(void )
 {
 	char i = ( char )(pxCurrentTCB)->pxTaskTag;
 	switch(i)
 	{
-		case '0': //IDLE task
-			GPIO_write(PORT_0,PIN1,PIN_IS_HIGH);
-		break;
 		case '1': //Load 1 task
-			GPIO_write(PORT_0,PIN2,PIN_IS_HIGH);
+			task_1_in = T1TC;
+		GPIO_write(PORT_0,PIN2,PIN_IS_HIGH);
 		break;
 		case '2': //Load2 task
+						task_2_in = T1TC;
 			GPIO_write(PORT_0,PIN3,PIN_IS_HIGH);
 		break;
 		case '3': //Reciver task
+						task_3_in = T1TC;
 			GPIO_write(PORT_0,PIN4,PIN_IS_HIGH);
 		break;
 		case '4': //Periodic task
+						task_4_in = T1TC;
 			GPIO_write(PORT_0,PIN5,PIN_IS_HIGH);
 		break;
 		case '5': //Button 1 task
+						task_5_in = T1TC;
 			GPIO_write(PORT_0,PIN6,PIN_IS_HIGH);
 		break;
 		case '6': //Button 2 task
+						task_6_in = T1TC;
 			GPIO_write(PORT_0,PIN7,PIN_IS_HIGH);
 		break;
+		case 'S': //Button 2 task
+			GPIO_write(PORT_0,PIN8,PIN_IS_HIGH);
+		break;
 		default:  //IDLE Task 
+						task_7_in = T1TC;
 			GPIO_write(PORT_0,PIN1,PIN_IS_HIGH);
 		break;
 		
@@ -5679,31 +5699,48 @@ void taskSwitc_IN (void)
 	
 }
 
-void taskSwitc_out (void)
+void myTaskSwitch_OUT (void)
 {
 	char i = ( char )(pxCurrentTCB)->pxTaskTag;
 	switch(i)
 	{			
 		case '1': //Load 1 task
+			task_1_out = T1TC;
 			GPIO_write(PORT_0,PIN2,PIN_IS_LOW);
+			task_1_total_time +=(task_1_out - task_1_in);
 		break;
 		case '2': //Load2 task
+			task_2_out = T1TC;
 			GPIO_write(PORT_0,PIN3,PIN_IS_LOW);
+		task_2_total_time +=(task_2_out - task_2_in);
 		break;
 		case '3': //Reciver task
+			task_3_out = T1TC;
 			GPIO_write(PORT_0,PIN4,PIN_IS_LOW);
+		task_3_total_time +=(task_3_out - task_3_in);
 		break;
 		case '4': //Periodic task
+			task_4_out = T1TC;
 			GPIO_write(PORT_0,PIN5,PIN_IS_LOW);
+		task_4_total_time +=(task_4_out - task_4_in);
 		break;
 		case '5': //Button 1 task
+			task_5_out = T1TC;
 			GPIO_write(PORT_0,PIN6,PIN_IS_LOW);
+		task_5_total_time +=(task_5_out - task_5_in);
 		break;
 		case '6': //Button 2 task
+			task_6_out = T1TC;
 			GPIO_write(PORT_0,PIN7,PIN_IS_LOW);
+		task_6_total_time +=(task_6_out - task_6_in);
+		break;
+		case 'S': //Button 2 task
+			GPIO_write(PORT_0,PIN8,PIN_IS_LOW);
 		break;
 		default:  //IDLE Task 
+			task_7_out = T1TC;
 			GPIO_write(PORT_0,PIN1,PIN_IS_LOW);
+		task_7_total_time +=(task_7_out - task_7_in);
 			break;
 	}
 	

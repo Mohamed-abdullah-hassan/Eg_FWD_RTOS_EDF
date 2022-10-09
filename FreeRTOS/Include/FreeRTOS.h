@@ -358,9 +358,8 @@
 
 /* Called after a task has been selected to run.  pxCurrentTCB holds a pointer
  * to the task control block of the selected task. */
-
-    extern void taskSwitc_IN(void);
-    #define traceTASK_SWITCHED_IN()  taskSwitc_IN();
+		extern void taskSwitc_IN(void);
+    #define traceTASK_SWITCHED_IN()   myTaskSwitch_IN()
 	
 #endif
 
@@ -386,8 +385,7 @@
 
 /* Called before a task has been selected to run.  pxCurrentTCB holds a pointer
  * to the task control block of the task being switched out. */
- extern void taskSwitc_out(void);
-    #define traceTASK_SWITCHED_OUT() taskSwitc_out();
+    #define traceTASK_SWITCHED_OUT() myTaskSwitch_OUT()
 #endif
 
 #ifndef traceTASK_PRIORITY_INHERIT

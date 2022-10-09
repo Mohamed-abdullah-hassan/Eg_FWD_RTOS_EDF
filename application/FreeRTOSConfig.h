@@ -68,14 +68,18 @@
 /* Set the following definitions to 1 to include the API function, or zero
 to exclude the API function. */
 
-#define INCLUDE_vTaskPrioritySet		1
-#define INCLUDE_uxTaskPriorityGet		1
+#define INCLUDE_vTaskPrioritySet		0
+#define INCLUDE_uxTaskPriorityGet		0
 #define INCLUDE_vTaskDelete				0
 #define INCLUDE_vTaskCleanUpResources	0
 #define INCLUDE_vTaskSuspend			0
 #define INCLUDE_vTaskDelayUntil			1
 #define INCLUDE_vTaskDelay				1
 
-
+/* Trace Macros*/
+		extern void myTaskSwitch_IN(void);
+		extern void myTaskSwitch_OUT(void);
+    #define traceTASK_SWITCHED_IN() myTaskSwitch_IN()
+    #define traceTASK_SWITCHED_OUT() myTaskSwitch_OUT()
 
 #endif /* FREERTOS_CONFIG_H */

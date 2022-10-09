@@ -59,6 +59,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
+#include "lpc21xx.h"
 
 /* Drivers includes */
 #include "GPIO.h"
@@ -91,7 +92,20 @@ TaskHandle_t xHandlePeriodic = NULL;
 TaskHandle_t xHandleRecevier = NULL;
 TaskHandle_t xHandleLoad1 = NULL;
 TaskHandle_t xHandleLoad2 = NULL;
+TaskHandle_t xHandleStatus = NULL;
+char runTimeStats[290];
 
+/* Timers values for tracing tasks execution*/
+uint32_t task_1_in=0,task_1_out=0,task_1_total_time =0;  // Load 1 Task time holders
+uint32_t task_2_in=0,task_2_out=0,task_2_total_time =0;  // Load 2 Task time holders
+uint32_t task_3_in=0,task_3_out=0,task_3_total_time =0;  // Receiver Task time holders
+uint32_t task_4_in=0,task_4_out=0,task_4_total_time =0;  // Periodic Task time holders
+uint32_t task_5_in=0,task_5_out=0,task_5_total_time =0;  // Button 1 Monitor Task time holders
+uint32_t task_6_in=0,task_6_out=0,task_6_total_time =0;  // Button 2 Monitor Task time holders
+uint32_t task_7_in=0,task_7_out=0,task_7_total_time =0;  // IDLE Task time holders
+uint32_t system_time=0;
+
+float cpu_load=0, task_load_1=0,task_load_2=0,task_receiver=0,task_periodic=0,task_button_1=0,task_button_2=0,task_idle=0; 
 
 /* Inserting the definition of xTaskPeriodicCreate() as only i can send main.c, tasks.c, and FreeRTOSConfig.h */
 extern BaseType_t xTaskPeriodicCreate( TaskFunction_t pxTaskCode,
@@ -111,6 +125,18 @@ typedef struct
 	
 }	buttonParam_t;
 
+void timer1Reset(void)
+{
+	T1TCR |= 0x2;
+	T1TCR &= ~0x2;
+}
+
+static void configTimer1(void)
+{
+	T1PR = 1000;
+	T1TCR |= 0x1;
+}
+
 
 /* Hardware Initialization funtion */
 static void prvSetupHardware( void )
@@ -124,7 +150,10 @@ static void prvSetupHardware( void )
   /* Configure UART */
 	xSerialPortInitMinimal(mainCOM_TEST_BAUD_RATE);
 
-	/* Setup the peripheral bus to be the same as the PLL output. */
+	/* Config trace timer 1 and read T1TC to get current tick */
+	configTimer1();
+
+/* Setup the peripheral bus to be the same as the PLL output. */
 	VPBDIV = mainBUS_CLK_FULL;
 }
 
@@ -178,6 +207,8 @@ void xPeriodicTask( void * pvParameters )
     {
 			xQueueSend(SimpleQueue,&i , portMAX_DELAY);
 			vTaskDelayUntil( &xLastWakeTime, 100 );
+//			vSerialPutString(runTimeStats,290);
+			
     }
 }
 
@@ -244,7 +275,7 @@ void Load_1_Task( void * pvParameters )
 		volatile int i = 2;
     for( ;; )
     {
-			for(i=0;i<5055;i++)
+			for(i=0;i<5145;i++)
 			{
 				GPIO_write(PORT_0,PIN15,PIN_IS_LOW);
 			}
@@ -261,7 +292,7 @@ void Load_2_Task( void * pvParameters )
 		volatile int i = 2;
     for( ;; )
     {
-			for(i=0;i<12135;i++) 
+			for(i=0;i<12000;i++) 
 			{
 				GPIO_write(PORT_0,PIN15,PIN_IS_HIGH);
 			}
@@ -270,6 +301,22 @@ void Load_2_Task( void * pvParameters )
     }
 }
 
+void runTime_status( void * pvParameters )
+{
+		TickType_t xLastWakeTime = xTaskGetTickCount();
+    for( ;; )
+    {
+			vTaskDelayUntil( &xLastWakeTime, 120 );
+			system_time = T1TC;
+			task_load_1 = (float)(task_1_total_time *100)/system_time;
+			task_load_2 = (float)(task_2_total_time *100)/system_time;
+			task_receiver = (float)(task_3_total_time *100)/system_time;
+			task_periodic = (float)(task_4_total_time *100)/system_time;
+			task_button_1 = (float)(task_5_total_time *100)/system_time;
+			task_button_2 = (float)(task_6_total_time *100)/system_time;
+			task_idle = (float)(task_7_total_time *100)/system_time;
+    }
+}
 
 /*
  * Application entry point:
@@ -284,12 +331,12 @@ int main( void )
 	prvSetupHardware();
 
 #if (configUSE_EDF_SCHEDULER ==0)	
-  xTaskCreate(xTaskReceiver      ,"Reciver" ,100 ,NULL      ,3 ,xHandleRecevier );    	
-	xTaskCreate(xPeriodicTask      ,"Period"  ,100 ,NULL      ,2 ,xHandlePeriodic );    	
-	xTaskCreate(Load_1_Task        ,"Load1"   ,100 ,NULL      ,2 ,xHandleLoad1 );   
-	xTaskCreate(Load_2_Task        ,"Load2"   ,100 ,NULL      ,1 ,xHandleLoad2 );   
-	xTaskCreate(xButtonMonitorTask ,"Button1" ,100 ,&button_1 ,1 ,xHandleButton1 );    	
-	xTaskCreate(xButtonMonitorTask ,"Button2" ,100 ,&button_2 ,1 ,xHandleButton2 );
+  xTaskCreate(xTaskReceiver      ,"Reciver" ,100 ,NULL      ,3 ,&xHandleRecevier );    	
+	xTaskCreate(xPeriodicTask      ,"Period"  ,100 ,NULL      ,2 ,&xHandlePeriodic );    	
+	xTaskCreate(Load_1_Task        ,"Load1"   ,100 ,NULL      ,2 ,&xHandleLoad1 );   
+	xTaskCreate(Load_2_Task        ,"Load2"   ,100 ,NULL      ,1 ,&xHandleLoad2 );   
+	xTaskCreate(xButtonMonitorTask ,"Button1" ,100 ,&button_1 ,1 ,&xHandleButton1 );    	
+	xTaskCreate(xButtonMonitorTask ,"Button2" ,100 ,&button_2 ,1 ,&xHandleButton2 );
 #else	
 	xTaskPeriodicCreate(Load_1_Task       ,"Load1"   ,100 ,NULL      ,2 ,10  ,&xHandleLoad1 );  
 	xTaskPeriodicCreate(Load_2_Task       ,"Load2"   ,100 ,NULL      ,1 ,100 ,&xHandleLoad2 );   		    	
@@ -297,6 +344,7 @@ int main( void )
 	xTaskPeriodicCreate(xPeriodicTask     ,"Period"  ,100 ,NULL      ,2 ,100 ,&xHandlePeriodic);    		
 	xTaskPeriodicCreate(xButtonMonitorTask,"Button1" ,100 ,&button_1 ,1 ,50  ,&xHandleButton1 );  
 	xTaskPeriodicCreate(xButtonMonitorTask,"Button2" ,100 ,&button_2 ,1 ,50  ,&xHandleButton2 );    		
+	xTaskPeriodicCreate(runTime_status    ,"Status"  ,100 ,NULL      ,1 ,120 ,&xHandleStatus );    		
 #endif
 	
 #if (configUSE_APPLICATION_TASK_TAG ==1)
@@ -306,6 +354,7 @@ int main( void )
 	vTaskSetApplicationTaskTag( xHandlePeriodic , ( TaskHookFunction_t ) '4' );
 	vTaskSetApplicationTaskTag( xHandleButton1  , ( TaskHookFunction_t ) '5' );
 	vTaskSetApplicationTaskTag( xHandleButton2  , ( TaskHookFunction_t ) '6' );
+	vTaskSetApplicationTaskTag( xHandleStatus   , ( TaskHookFunction_t ) 'S' );
 #endif
 
 	SimpleQueue = xQueueCreate(5, sizeof (int));
