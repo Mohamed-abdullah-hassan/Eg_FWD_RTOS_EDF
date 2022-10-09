@@ -5658,14 +5658,8 @@ void taskSwitc_IN (void)
 		case '6': //Button 2 task
 			GPIO_write(PORT_0,PIN7,PIN_IS_HIGH);
 		break;
-		default:
-			GPIO_write(PORT_0,PIN1,PIN_IS_LOW);
-		GPIO_write(PORT_0,PIN2,PIN_IS_LOW);
-		GPIO_write(PORT_0,PIN3,PIN_IS_LOW);
-		GPIO_write(PORT_0,PIN4,PIN_IS_LOW);
-		GPIO_write(PORT_0,PIN5,PIN_IS_LOW);
-		GPIO_write(PORT_0,PIN6,PIN_IS_LOW);
-		GPIO_write(PORT_0,PIN7,PIN_IS_LOW);
+		default:  //IDLE Task 
+			GPIO_write(PORT_0,PIN1,PIN_IS_HIGH);
 		break;
 		
 	}
@@ -5676,10 +5670,7 @@ void taskSwitc_out (void)
 {
 	char i = ( char )(pxCurrentTCB)->pxTaskTag;
 	switch(i)
-	{
-		case '0': //IDLE task
-			GPIO_write(PORT_0,PIN1,PIN_IS_LOW);
-		break;
+	{			
 		case '1': //Load 1 task
 			GPIO_write(PORT_0,PIN2,PIN_IS_LOW);
 		break;
@@ -5698,7 +5689,8 @@ void taskSwitc_out (void)
 		case '6': //Button 2 task
 			GPIO_write(PORT_0,PIN7,PIN_IS_LOW);
 		break;
-		default:
+		default:  //IDLE Task 
+			GPIO_write(PORT_0,PIN1,PIN_IS_LOW);
 			break;
 	}
 	
