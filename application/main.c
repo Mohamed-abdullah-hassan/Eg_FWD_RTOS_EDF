@@ -69,7 +69,7 @@
 /*-----------------------------------------------------------*/
 
 #define receiverQueueByID  1
-#define buttonUseRCFilter  0  //Debouncing is performed using physical RC filter
+#define configButton_USE_RC_Filter  1  //Debouncing is performed using physical RC filter
 
 /* Constants to setup I/O and processor. */
 #define mainTX_ENABLE		( ( unsigned long ) 0x00010000 )	/* UART1. */
@@ -202,14 +202,18 @@ void vButton_Monitor (void * pvParameters )
 	int id = (pin->id);
 	pinState_t buttonSwitch;
 	unsigned char oldState=PIN_IS_LOW; //variable to monitor user action
+	#if (configButton_USE_RC_Filter ==0)
 	unsigned char count =0; //simple algorithm for Debouncing
+	#endif
 //			int i = 2;
 
 	for ( ;; )
 	{
 		buttonSwitch = GPIO_read(PORT_1,pin->pin);
+		#if (configButton_USE_RC_Filter ==0)
 		if( buttonSwitch != oldState)
 		{
+			
 			count++;
 			
 			if(count >=3) //Ensure that the button is pressed continuoly for 30 ms
@@ -224,6 +228,16 @@ void vButton_Monitor (void * pvParameters )
 		{
 			count =0;
 		}
+		#else
+		if( buttonSwitch != oldState)
+		{
+			
+			id = (pin->id)|buttonSwitch;
+		  xQueueSend(SimpleQueue,&id , portMAX_DELAY);
+	  	oldState = buttonSwitch;				
+			
+		}
+		#endif
 		vTaskDelayUntil( &xLastWakeTime, 50 );
 	}
 }
