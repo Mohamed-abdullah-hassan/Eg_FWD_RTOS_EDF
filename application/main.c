@@ -133,7 +133,7 @@ static void prvSetupHardware( void )
 //  Tasks                                                                         //
 ////////////////////////////////////////////////////////////////////////////////////
 
-void fasttask( void * pvParameters )
+void xTaskReceiver( void * pvParameters )
 {    
 	TickType_t xLastWakeTime = xTaskGetTickCount();
 	int received=0;
@@ -170,7 +170,7 @@ void fasttask( void * pvParameters )
 
 
 
-void vTaskCode2( void * pvParameters )
+void xPeriodicTask( void * pvParameters )
 {
 	TickType_t xLastWakeTime = xTaskGetTickCount();
 		static int i = periodicID;
@@ -184,7 +184,7 @@ void vTaskCode2( void * pvParameters )
 
 
 // Button monitoring task the which well be create two instance to monitore both buttons
-void vButton_Monitor (void * pvParameters )
+void xButtonMonitorTask (void * pvParameters )
 {
 	TickType_t xLastWakeTime = xTaskGetTickCount();
 	buttonParam_t * pin = (buttonParam_t *) pvParameters;
@@ -284,19 +284,19 @@ int main( void )
 	prvSetupHardware();
 
 #if (configUSE_EDF_SCHEDULER ==0)	
-  xTaskCreate(fasttask  ,"NAME",100,NULL,3,NULL );    	
-	xTaskCreate(vTaskCode2,"NAME",100,NULL,2,NULL );    	
-	xTaskCreate(Load_1_Task   ,"NAME",100,NULL,2,NULL );   
-	xTaskCreate(Load_2_Task   ,"NAME",100,NULL,1,NULL );   
-	xTaskCreate(vButton_Monitor,"NAME",100,&button_1,1,NULL );    	
-	xTaskCreate(vButton_Monitor,"NAME",100,&button_2,1,NULL );
+  xTaskCreate(xTaskReceiver      ,"Reciver" ,100 ,NULL      ,3 ,xHandleRecevier );    	
+	xTaskCreate(xPeriodicTask      ,"Period"  ,100 ,NULL      ,2 ,xHandlePeriodic );    	
+	xTaskCreate(Load_1_Task        ,"Load1"   ,100 ,NULL      ,2 ,xHandleLoad1 );   
+	xTaskCreate(Load_2_Task        ,"Load2"   ,100 ,NULL      ,1 ,xHandleLoad2 );   
+	xTaskCreate(xButtonMonitorTask ,"Button1" ,100 ,&button_1 ,1 ,xHandleButton1 );    	
+	xTaskCreate(xButtonMonitorTask ,"Button2" ,100 ,&button_2 ,1 ,xHandleButton2 );
 #else	
-	xTaskPeriodicCreate(Load_1_Task   ,"Load1",100,NULL,2,10,&xHandleLoad1 );  
-	xTaskPeriodicCreate(Load_2_Task   ,"Load2",100,NULL,1,100,&xHandleLoad2 );   		    	
-	xTaskPeriodicCreate(fasttask  ,"Reciver",100,NULL,3,20,&xHandleRecevier );  
-	xTaskPeriodicCreate(vTaskCode2,"Period",100,NULL,2,100,&xHandlePeriodic);    		
-	xTaskPeriodicCreate(vButton_Monitor,"Button1",100,&button_1,1,50,&xHandleButton1 );  
-	xTaskPeriodicCreate(vButton_Monitor,"Button2",100,&button_2,1,50,&xHandleButton2 );    		
+	xTaskPeriodicCreate(Load_1_Task       ,"Load1"   ,100 ,NULL      ,2 ,10  ,&xHandleLoad1 );  
+	xTaskPeriodicCreate(Load_2_Task       ,"Load2"   ,100 ,NULL      ,1 ,100 ,&xHandleLoad2 );   		    	
+	xTaskPeriodicCreate(xTaskReceiver     ,"Reciver" ,100 ,NULL      ,3 ,20  ,&xHandleRecevier );  
+	xTaskPeriodicCreate(xPeriodicTask     ,"Period"  ,100 ,NULL      ,2 ,100 ,&xHandlePeriodic);    		
+	xTaskPeriodicCreate(xButtonMonitorTask,"Button1" ,100 ,&button_1 ,1 ,50  ,&xHandleButton1 );  
+	xTaskPeriodicCreate(xButtonMonitorTask,"Button2" ,100 ,&button_2 ,1 ,50  ,&xHandleButton2 );    		
 #endif
 	
 #if (configUSE_APPLICATION_TASK_TAG ==1)
@@ -311,7 +311,6 @@ int main( void )
 	SimpleQueue = xQueueCreate(5, sizeof (int));
   if (SimpleQueue == 0)  // Queue not created
   {
-	  
 		vSerialPutString((const signed char *)"Unable to create Integer Queue\n", 31);
   }
   else
