@@ -85,6 +85,12 @@
 
 /* Global Variables Definition*/
 xQueueHandle SimpleQueue;      //Queue handelr used to inter-process comunication
+TaskHandle_t xHandleButton1 = NULL;
+TaskHandle_t xHandleButton2 = NULL;
+TaskHandle_t xHandlePeriodic = NULL;
+TaskHandle_t xHandleRecevier = NULL;
+TaskHandle_t xHandleLoad1 = NULL;
+TaskHandle_t xHandleLoad2 = NULL;
 
 
 /* Inserting the definition of xTaskPeriodicCreate() as only i can send main.c, tasks.c, and FreeRTOSConfig.h */
@@ -185,15 +191,17 @@ void vButton_Monitor (void * pvParameters )
 	int id = (pin->id);
 	pinState_t buttonSwitch;
 	unsigned char oldState=PIN_IS_LOW; //variable to monitor user action
+
 	#if (configButton_USE_RC_Filter ==0)
 	unsigned char count =0; //simple algorithm for Debouncing
-	#endif
-//			int i = 2;
+#endif
 
 	for ( ;; )
 	{
 		buttonSwitch = GPIO_read(PORT_1,pin->pin);
-		#if (configButton_USE_RC_Filter ==0)
+
+#if (configButton_USE_RC_Filter ==0)
+		
 		if( buttonSwitch != oldState)
 		{
 			
@@ -211,7 +219,9 @@ void vButton_Monitor (void * pvParameters )
 		{
 			count =0;
 		}
-		#else
+
+#else
+
 		if( buttonSwitch != oldState)
 		{
 			
@@ -220,7 +230,8 @@ void vButton_Monitor (void * pvParameters )
 	  	oldState = buttonSwitch;				
 			
 		}
-		#endif
+		
+#endif
 		vTaskDelayUntil( &xLastWakeTime, 50 );
 	}
 }
@@ -236,13 +247,10 @@ void Load_1_Task( void * pvParameters )
 			for(i=0;i<5055;i++)
 			{
 				GPIO_write(PORT_0,PIN15,PIN_IS_LOW);
-				//GPIO_write(PORT_0,PIN4,PIN_IS_HIGH);
 			}
-			//GPIO_write(PORT_0,PIN4,PIN_IS_LOW);
 			runcounters++;
 			vTaskDelayUntil( &xLastWakeTime, 10 );
 			xLastWakeTime = xTaskGetTickCount();
-			//GPIO_write(PORT_0,PIN4,PIN_IS_HIGH);
     }
 }
 
@@ -253,17 +261,12 @@ void Load_2_Task( void * pvParameters )
 		volatile int i = 2;
     for( ;; )
     {
-			//GPIO_write(PORT_0,PIN3,PIN_IS_HIGH);
 			for(i=0;i<12135;i++) 
 			{
-				//GPIO_write(PORT_0,PIN4,PIN_IS_LOW);
 				GPIO_write(PORT_0,PIN15,PIN_IS_HIGH);
 			}
-			
-			//GPIO_write(PORT_0,PIN3,PIN_IS_LOW);
 			vTaskDelayUntil( &xLastWakeTime, 100 );
 			xLastWakeTime = xTaskGetTickCount();
-			//GPIO_write(PORT_0,PIN3,PIN_IS_HIGH);
     }
 }
 
@@ -272,13 +275,7 @@ void Load_2_Task( void * pvParameters )
  * Application entry point:
  * Starts all the other tasks, then starts the scheduler. 
  */
-TaskHandle_t xHandleButton1 = NULL;
-	TaskHandle_t xHandleButton2 = NULL;
-	TaskHandle_t xHandlePeriodic = NULL;
-	TaskHandle_t xHandleRecevier = NULL;
-	TaskHandle_t xHandleLoad1 = NULL;
-	TaskHandle_t xHandleLoad2 = NULL;
-
+  
 static buttonParam_t button_1 = {button1ID,PIN1};
 static buttonParam_t button_2 = {button2ID,PIN2};
 int main( void )
@@ -286,17 +283,7 @@ int main( void )
 	/* Setup the hardware for use with the Keil demo board. */
 	prvSetupHardware();
 
-	/* Start the demo/test application tasks. */
-	
-	/* Start the check task - which is defined in this file.  This is the task
-	that periodically checks to see that all the other tasks are executing 
-	without error. */
-	
-	
-	
-	
-	
-	
+		
  // xTaskCreate(fasttask  ,"NAME",100,NULL,3,NULL );    	
 	//xTaskCreate(vTaskCode2,"NAME",100,NULL,2,NULL );    	
 	//xTaskCreate(Load_1_Task   ,"NAME",100,NULL,2,NULL );   
@@ -327,13 +314,7 @@ int main( void )
   {
 	  vSerialPutString((const signed char *)"Integer Queue Created successfully\n\n", 35);
   }
-	/* Now all the tasks have been started - start the scheduler.
 
-	NOTE : Tasks run in system mode and the scheduler runs in Supervisor mode.
-	The processor MUST be in supervisor mode when vTaskStartScheduler is 
-	called.  The demo applications included in the FreeRTOS.org download switch
-	to supervisor mode prior to main being called.  If you are not using one of
-	these demo application projects then ensure Supervisor mode is used here. */
 	vTaskStartScheduler();
 
 	/* Should never reach here!  If you do then there was not enough heap
