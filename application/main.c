@@ -300,12 +300,12 @@ int main( void )
 #endif
 	
 #if (configUSE_APPLICATION_TASK_TAG ==1)
-	vTaskSetApplicationTaskTag( xHandleLoad1, ( void * ) '1' );
-	vTaskSetApplicationTaskTag( xHandleLoad2, ( void * ) '2' );
-	vTaskSetApplicationTaskTag( xHandleRecevier, ( void * ) '3' );
-	vTaskSetApplicationTaskTag( xHandlePeriodic, ( void * ) '4' );
-	vTaskSetApplicationTaskTag( xHandleButton1, ( void * ) '5' );
-	vTaskSetApplicationTaskTag( xHandleButton2, ( void * ) '6' );
+	vTaskSetApplicationTaskTag( xHandleLoad1    , ( TaskHookFunction_t ) '1' );
+	vTaskSetApplicationTaskTag( xHandleLoad2    , ( TaskHookFunction_t ) '2' );
+	vTaskSetApplicationTaskTag( xHandleRecevier , ( TaskHookFunction_t ) '3' );
+	vTaskSetApplicationTaskTag( xHandlePeriodic , ( TaskHookFunction_t ) '4' );
+	vTaskSetApplicationTaskTag( xHandleButton1  , ( TaskHookFunction_t ) '5' );
+	vTaskSetApplicationTaskTag( xHandleButton2  , ( TaskHookFunction_t ) '6' );
 #endif
 
 	SimpleQueue = xQueueCreate(5, sizeof (int));
