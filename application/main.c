@@ -283,27 +283,31 @@ int main( void )
 	/* Setup the hardware for use with the Keil demo board. */
 	prvSetupHardware();
 
-		
- // xTaskCreate(fasttask  ,"NAME",100,NULL,3,NULL );    	
-	//xTaskCreate(vTaskCode2,"NAME",100,NULL,2,NULL );    	
-	//xTaskCreate(Load_1_Task   ,"NAME",100,NULL,2,NULL );   
-	//xTaskCreate(Load_2_Task   ,"NAME",100,NULL,1,NULL );   
+#if (configUSE_EDF_SCHEDULER ==0)	
+  xTaskCreate(fasttask  ,"NAME",100,NULL,3,NULL );    	
+	xTaskCreate(vTaskCode2,"NAME",100,NULL,2,NULL );    	
+	xTaskCreate(Load_1_Task   ,"NAME",100,NULL,2,NULL );   
+	xTaskCreate(Load_2_Task   ,"NAME",100,NULL,1,NULL );   
+	xTaskCreate(vButton_Monitor,"NAME",100,&button_1,1,NULL );    	
+	xTaskCreate(vButton_Monitor,"NAME",100,&button_2,1,NULL );
+#else	
 	xTaskPeriodicCreate(Load_1_Task   ,"Load1",100,NULL,2,10,&xHandleLoad1 );  
-	xTaskPeriodicCreate(Load_2_Task   ,"Load2",100,NULL,1,100,&xHandleLoad2 );   	
-	//xTaskCreate(vButton_Monitor,"NAME",100,&button_1,1,NULL );    	
-	//xTaskCreate(vButton_Monitor,"NAME",100,&button_2,1,NULL );    	
+	xTaskPeriodicCreate(Load_2_Task   ,"Load2",100,NULL,1,100,&xHandleLoad2 );   		    	
 	xTaskPeriodicCreate(fasttask  ,"Reciver",100,NULL,3,20,&xHandleRecevier );  
 	xTaskPeriodicCreate(vTaskCode2,"Period",100,NULL,2,100,&xHandlePeriodic);    		
 	xTaskPeriodicCreate(vButton_Monitor,"Button1",100,&button_1,1,50,&xHandleButton1 );  
 	xTaskPeriodicCreate(vButton_Monitor,"Button2",100,&button_2,1,50,&xHandleButton2 );    		
+#endif
 	
+#if (configUSE_APPLICATION_TASK_TAG ==1)
 	vTaskSetApplicationTaskTag( xHandleLoad1, ( void * ) '1' );
 	vTaskSetApplicationTaskTag( xHandleLoad2, ( void * ) '2' );
 	vTaskSetApplicationTaskTag( xHandleRecevier, ( void * ) '3' );
 	vTaskSetApplicationTaskTag( xHandlePeriodic, ( void * ) '4' );
 	vTaskSetApplicationTaskTag( xHandleButton1, ( void * ) '5' );
 	vTaskSetApplicationTaskTag( xHandleButton2, ( void * ) '6' );
-	
+#endif
+
 	SimpleQueue = xQueueCreate(5, sizeof (int));
   if (SimpleQueue == 0)  // Queue not created
   {
