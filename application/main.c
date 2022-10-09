@@ -71,35 +71,42 @@
 #define receiverQueueByID  1
 #define configButton_USE_RC_Filter  1  //Debouncing is performed using physical RC filter
 
-/* Constants to setup I/O and processor. */
+/* Constants to setup UART1 */
 #define mainTX_ENABLE		( ( unsigned long ) 0x00010000 )	/* UART1. */
-//#define mainRX_ENABLE		( ( unsigned long ) 0x00040000 ) 	/* UART1. */
 #define mainBUS_CLK_FULL	( ( unsigned char ) 0x01 )
-
-
-/* Constants for the ComTest demo application tasks. */
 #define mainCOM_TEST_BAUD_RATE	( ( unsigned long ) 115200 )
 
+
+/* Defining Tasks ID for the reciver identification */
 #define button1ID        (('1')<<1)
 #define button2ID        (('2')<<1)
 #define periodicID       (('3')<<1)
 
+
+/* Global Variables Definition*/
+xQueueHandle SimpleQueue;      //Queue handelr used to inter-process comunication
+
+
+/* Inserting the definition of xTaskPeriodicCreate() as only i can send main.c, tasks.c, and FreeRTOSConfig.h */
 extern BaseType_t xTaskPeriodicCreate( TaskFunction_t pxTaskCode,
-                            const char * const pcName, /*lint !e971 Unqualified char types are allowed for strings and single characters only. */
+                            const char * const pcName,
                             const configSTACK_DEPTH_TYPE usStackDepth,
                             void * const pvParameters,
                             UBaseType_t uxPriority,
 														TickType_t period,
                             TaskHandle_t * const pxCreatedTask );
 
+														
+/* Structure Definition to pass to two instance of vButton_Monitor() to defrentiate both logics */														
 typedef struct
 {
-	int id;
-	pinX_t pin;
-
+	int id;                // Is the id of the sending task ie: Button 1 or 2
+	pinX_t pin;            // Pin number in the GPIO Register
+	
 }	buttonParam_t;
 
 
+/* Hardware Initialization funtion */
 static void prvSetupHardware( void )
 {
 	/* Confguring the GPIO pins */
@@ -107,7 +114,6 @@ static void prvSetupHardware( void )
 	
   /* Configure the UART1 pins.  All other pins remain at their default of 0. */
 	PINSEL0 |= mainTX_ENABLE;
-	//PINSEL0 |= mainRX_ENABLE;  //Removed due no need for it
 	
   /* Configure UART */
 	xSerialPortInitMinimal(mainCOM_TEST_BAUD_RATE);
@@ -115,19 +121,11 @@ static void prvSetupHardware( void )
 	/* Setup the peripheral bus to be the same as the PLL output. */
 	VPBDIV = mainBUS_CLK_FULL;
 }
-/*-----------------------------------------------------------*/
-
-
-
-xQueueHandle SimpleQueue;
 
 
 ////////////////////////////////////////////////////////////////////////////////////
 //  Tasks                                                                         //
 ////////////////////////////////////////////////////////////////////////////////////
-
-
-
 
 void fasttask( void * pvParameters )
 {    
@@ -135,17 +133,12 @@ void fasttask( void * pvParameters )
 	int received=0;
     for( ;; )
     {
-		//	GPIO_write(PORT_0,PIN4,PIN_IS_HIGH);
 			if (xQueueReceive(SimpleQueue, &received, 0) != pdTRUE)
 		{
-			
-			//vSerialPutString("Error in Receiving from Queue\n\n",31);
-			
+					
 		}
 		else
 		{
-			//GPIO_write(PORT_0,PIN4,PIN_IS_LOW);
-			
 			switch (received)
 			{
 				case (button1ID):
@@ -164,16 +157,8 @@ void fasttask( void * pvParameters )
 					vSerialPutString((const signed char *)"Periodic Task Message\n",22);
 				break;
 			}
-			
-			//vSerialPutString((const signed char *)"Successfully\n",13);
-			//GPIO_write(PORT_0,PIN3,PIN_IS_LOW);
 		}
-		;
-        //vSerialPutString((const signed char *)"Hello\n",6);
-		
-
-			vTaskDelayUntil( &xLastWakeTime, 20 );
-		//GPIO_write(PORT_0,PIN3,PIN_IS_HIGH);
+		vTaskDelayUntil( &xLastWakeTime, 20 );
     }
 }
 
