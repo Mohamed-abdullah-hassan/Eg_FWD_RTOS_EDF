@@ -171,9 +171,7 @@ void vTaskCode2( void * pvParameters )
     for( ;; )
     {
 			xQueueSend(SimpleQueue,&i , portMAX_DELAY);
-			//GPIO_write(PORT_0,PIN2,PIN_IS_LOW);
 			vTaskDelayUntil( &xLastWakeTime, 100 );
-			//GPIO_write(PORT_0,PIN2,PIN_IS_HIGH);
     }
 }
 
