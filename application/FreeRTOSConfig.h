@@ -44,6 +44,7 @@
 
 #define configUSE_EDF_SCHEDULER 1
 #define configUSE_IDLE_MAX_DELAY 0
+#define configUSE_Optimize_Task_Switching  1
 #define configUSE_APPLICATION_TASK_TAG  1
 #define configUSE_PREEMPTION		1
 #define configUSE_IDLE_HOOK			0

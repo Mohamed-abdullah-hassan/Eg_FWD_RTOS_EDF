@@ -3190,6 +3190,7 @@ BaseType_t xTaskCallApplicationTaskHook(TaskHandle_t xTask,
 
 void vTaskSwitchContext(void)
 {
+	TCB_t *xTCB;
     if (uxSchedulerSuspended != (UBaseType_t)pdFALSE)
     {
         /* The scheduler is currently suspended - do not allow a context
@@ -3199,7 +3200,9 @@ void vTaskSwitchContext(void)
     else
     {
         xYieldPending = pdFALSE;
+#if (configUSE_Optimize_Task_Switching ==0)
         traceTASK_SWITCHED_OUT();
+#endif
 
 #if (configGENERATE_RUN_TIME_STATS == 1)
         {
@@ -3244,12 +3247,22 @@ void vTaskSwitchContext(void)
 #if (configUSE_EDF_SCHEDULER == 0)
         taskSELECT_HIGHEST_PRIORITY_TASK(); /*lint !e9079 void * is used as this macro is used with timers and co-routines too.  Alignment is known to be fine as the type of the pointer stored and retrieved is the same. */
 #else
-
+#if (configUSE_Optimize_Task_Switching ==0)
         pxCurrentTCB = (TCB_t *)listGET_OWNER_OF_HEAD_ENTRY(&(xReadyTaskListEDF));
-				
 #endif
-        traceTASK_SWITCHED_IN();
 
+#endif
+#if (configUSE_Optimize_Task_Switching ==1)
+				xTCB = (TCB_t *)listGET_OWNER_OF_HEAD_ENTRY(&(xReadyTaskListEDF));
+				if(pxCurrentTCB != xTCB)
+				{
+					traceTASK_SWITCHED_OUT();
+					pxCurrentTCB = xTCB;
+					traceTASK_SWITCHED_IN();
+				}
+#else
+        traceTASK_SWITCHED_IN();
+#endif
 /* After the new task is switched in, update the global errno. */
 #if (configUSE_POSIX_ERRNO == 1)
         {
