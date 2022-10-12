@@ -43,9 +43,9 @@
  *----------------------------------------------------------*/
 
 #define configUSE_EDF_SCHEDULER 1
-#define configUSE_IDLE_MAX_DELAY 0
-#define configUSE_Optimize_Task_Switching  1
-#define configUSE_APPLICATION_TASK_TAG  1
+#define configUSE_IDLE_MAX_DELAY 1             //Used to push the IDLE task to the maximum allowable priodicity. 
+#define configUSE_Optimize_Task_Switching  1   //Used for visual improvment the logic analyzer display.
+#define configUSE_APPLICATION_TASK_TAG  1      //Used to enable Run time analysis to meassure time for each time
 #define configUSE_PREEMPTION		1
 #define configUSE_IDLE_HOOK			0
 #define configUSE_TICK_HOOK			1

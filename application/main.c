@@ -60,6 +60,7 @@
 #include "task.h"
 #include "queue.h"
 #include "lpc21xx.h"
+#include "bit_math.h"
 
 /* Drivers includes */
 #include "GPIO.h"
@@ -68,8 +69,6 @@
 /*-----------------------------------------------------------*/
 /* Macros for code Implementation */
 /*-----------------------------------------------------------*/
-
-#define receiverQueueByID  1
 #define configButton_USE_RC_Filter  1  //Debouncing is performed using physical RC filter
 
 /* Constants to setup UART1 */
@@ -86,13 +85,15 @@
 
 /* Global Variables Definition*/
 xQueueHandle SimpleQueue;      //Queue handelr used to inter-process comunication
+
+// Handlers for created tasks
 TaskHandle_t xHandleButton1 = NULL;
 TaskHandle_t xHandleButton2 = NULL;
 TaskHandle_t xHandlePeriodic = NULL;
 TaskHandle_t xHandleRecevier = NULL;
 TaskHandle_t xHandleLoad1 = NULL;
 TaskHandle_t xHandleLoad2 = NULL;
-TaskHandle_t xHandleStatus = NULL;
+TaskHandle_t xHandleStatus = NULL;  // This is for Run time analysis 
 char runTimeStats[290];
 
 /* Timers values for tracing tasks execution*/
@@ -104,7 +105,6 @@ uint32_t task_5_in=0,task_5_out=0,task_5_total_time =0;  // Button 1 Monitor Tas
 uint32_t task_6_in=0,task_6_out=0,task_6_total_time =0;  // Button 2 Monitor Task time holders
 uint32_t task_7_in=0,task_7_out=0,task_7_total_time =0;  // IDLE Task time holders
 uint32_t system_time=0;
-
 float cpu_load=0, task_load_1=0,task_load_2=0,task_receiver=0,task_periodic=0,task_button_1=0,task_button_2=0,task_idle=0; 
 
 /* Inserting the definition of xTaskPeriodicCreate() as only i can send main.c, tasks.c, and FreeRTOSConfig.h */
@@ -122,7 +122,6 @@ typedef struct
 {
 	int id;                // Is the id of the sending task ie: Button 1 or 2
 	pinX_t pin;            // Pin number in the GPIO Register
-	
 }	buttonParam_t;
 
 void timer1Reset(void)
@@ -131,28 +130,20 @@ void timer1Reset(void)
 	T1TCR &= ~0x2;
 }
 
-static void configTimer1(void)
-{
-	T1PR = 1000;
-	T1TCR |= 0x1;
-}
-
-
 /* Hardware Initialization funtion */
 static void prvSetupHardware( void )
 {
 	/* Confguring the GPIO pins */
-	GPIO_init();
-	
+	GPIO_init();	
+	CLR_BIT(IODIR1, PIN1);   //Re-configuring the input GPIO Port1.Pin1 as input just incase..
+	CLR_BIT(IODIR1, PIN2);   //Re-configuring the input GPIO Port1.Pin2 as input just incase..
   /* Configure the UART1 pins.  All other pins remain at their default of 0. */
 	PINSEL0 |= mainTX_ENABLE;
-	
   /* Configure UART */
 	xSerialPortInitMinimal(mainCOM_TEST_BAUD_RATE);
-
 	/* Config trace timer 1 and read T1TC to get current tick */
-	configTimer1();
-
+	T1PR = 10;
+	T1TCR |= 0x1;
 /* Setup the peripheral bus to be the same as the PLL output. */
 	VPBDIV = mainBUS_CLK_FULL;
 }
@@ -162,6 +153,7 @@ static void prvSetupHardware( void )
 //  Tasks                                                                         //
 ////////////////////////////////////////////////////////////////////////////////////
 
+// Button monitoring Task with periodicity 20ms, and Execution time 20us
 void xTaskReceiver( void * pvParameters )
 {    
 	TickType_t xLastWakeTime = xTaskGetTickCount();
@@ -197,8 +189,7 @@ void xTaskReceiver( void * pvParameters )
     }
 }
 
-
-
+// Periodic Task with periodicity 100ms, and Execution time 20us
 void xPeriodicTask( void * pvParameters )
 {
 	TickType_t xLastWakeTime = xTaskGetTickCount();
@@ -207,14 +198,12 @@ void xPeriodicTask( void * pvParameters )
     {
 			xQueueSend(SimpleQueue,&i , portMAX_DELAY);
 			vTaskDelayUntil( &xLastWakeTime, 100 );
-//			vSerialPutString(runTimeStats,290);
-			
     }
 }
 
-
-
 // Button monitoring task the which well be create two instance to monitore both buttons
+// Both instance get the required pin to monitor from pvParameters passed from main function
+// Button monitoring Task with periodicity 50ms, and Execution time 20us
 void xButtonMonitorTask (void * pvParameters )
 {
 	TickType_t xLastWakeTime = xTaskGetTickCount();
@@ -271,7 +260,6 @@ void xButtonMonitorTask (void * pvParameters )
 void Load_1_Task( void * pvParameters )
 {
 		TickType_t xLastWakeTime = xTaskGetTickCount();
-	volatile  int runcounters =0;
 		volatile int i = 2;
     for( ;; )
     {
@@ -279,7 +267,6 @@ void Load_1_Task( void * pvParameters )
 			{
 				GPIO_write(PORT_0,PIN15,PIN_IS_LOW);
 			}
-			runcounters++;
 			vTaskDelayUntil( &xLastWakeTime, 10 );
 			xLastWakeTime = xTaskGetTickCount();
     }
@@ -303,10 +290,12 @@ void Load_2_Task( void * pvParameters )
 
 void runTime_status( void * pvParameters )
 {
-		TickType_t xLastWakeTime = xTaskGetTickCount();
+	TickType_t xLastWakeTime = xTaskGetTickCount();
     for( ;; )
     {
 			vTaskDelayUntil( &xLastWakeTime, 120 );
+			if(system_time < T1TC)
+			{
 			system_time = T1TC;
 			task_load_1 = (float)(task_1_total_time *100)/system_time;
 			task_load_2 = (float)(task_2_total_time *100)/system_time;
@@ -315,6 +304,15 @@ void runTime_status( void * pvParameters )
 			task_button_1 = (float)(task_5_total_time *100)/system_time;
 			task_button_2 = (float)(task_6_total_time *100)/system_time;
 			task_idle = (float)(task_7_total_time *100)/system_time;
+			cpu_load = 100 - task_idle;
+			}
+			else // If the Timer 1 counter T1TC overflowed
+			{
+			system_time = task_load_1 = task_load_2 =	task_receiver =	task_periodic = task_button_1 = task_button_2 = task_idle = cpu_load = 0;
+				task_1_total_time =  task_2_total_time = task_3_total_time = task_4_total_time = task_5_total_time = task_6_total_time = system_time= task_7_total_time=0;
+			}
+			
+			
     }
 }
 
@@ -338,13 +336,13 @@ int main( void )
 	xTaskCreate(xButtonMonitorTask ,"Button1" ,100 ,&button_1 ,1 ,&xHandleButton1 );    	
 	xTaskCreate(xButtonMonitorTask ,"Button2" ,100 ,&button_2 ,1 ,&xHandleButton2 );
 #else	
-	xTaskPeriodicCreate(Load_1_Task       ,"Load1"   ,100 ,NULL      ,2 ,10  ,&xHandleLoad1 );  
-	xTaskPeriodicCreate(Load_2_Task       ,"Load2"   ,100 ,NULL      ,1 ,100 ,&xHandleLoad2 );   		    	
-	xTaskPeriodicCreate(xTaskReceiver     ,"Reciver" ,100 ,NULL      ,3 ,20  ,&xHandleRecevier );  
-	xTaskPeriodicCreate(xPeriodicTask     ,"Period"  ,100 ,NULL      ,2 ,100 ,&xHandlePeriodic);    		
-	xTaskPeriodicCreate(xButtonMonitorTask,"Button1" ,100 ,&button_1 ,1 ,50  ,&xHandleButton1 );  
-	xTaskPeriodicCreate(xButtonMonitorTask,"Button2" ,100 ,&button_2 ,1 ,50  ,&xHandleButton2 );    		
-	xTaskPeriodicCreate(runTime_status    ,"Status"  ,100 ,NULL      ,1 ,120 ,&xHandleStatus );    		
+	xTaskPeriodicCreate(Load_1_Task       ,"Load1"   ,100 ,NULL      ,0 ,10  ,&xHandleLoad1 );  
+	xTaskPeriodicCreate(Load_2_Task       ,"Load2"   ,100 ,NULL      ,0 ,100 ,&xHandleLoad2 );   		    	
+	xTaskPeriodicCreate(xTaskReceiver     ,"Receiver" ,100 ,NULL      ,0 ,20  ,&xHandleRecevier );  
+	xTaskPeriodicCreate(xPeriodicTask     ,"Period"  ,100 ,NULL      ,0 ,100 ,&xHandlePeriodic);    		
+	xTaskPeriodicCreate(xButtonMonitorTask,"Button1" ,100 ,&button_1 ,0 ,50  ,&xHandleButton1 );  
+	xTaskPeriodicCreate(xButtonMonitorTask,"Button2" ,100 ,&button_2 ,0 ,50  ,&xHandleButton2 );    		
+	xTaskPeriodicCreate(runTime_status    ,"Status"  ,100 ,NULL      ,0 ,500 ,&xHandleStatus );    		
 #endif
 	
 #if (configUSE_APPLICATION_TASK_TAG ==1)
@@ -375,13 +373,10 @@ int main( void )
 }
 /*-----------------------------------------------------------*/
 
-
-
-
 void vApplicationTickHook( void )
 {
-//	GPIO_write(PORT_0,PIN1,PIN_IS_HIGH);
-//	GPIO_write(PORT_0,PIN1,PIN_IS_LOW);
+	GPIO_write(PORT_0,PIN9,PIN_IS_HIGH);
+	GPIO_write(PORT_0,PIN9,PIN_IS_LOW);
 }
 /*-----------------------------------------------------------*/
 
